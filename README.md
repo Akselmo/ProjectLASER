@@ -31,6 +31,9 @@ All the sprites go here. Make sure to organize them to subcategories, such as "m
 
 All the sounds go here. Organize them aswell.
 
+## Branches
+
+Every sprint has it's own branch. Use the current sprint's branch when making the project. Master will be updated after every sprint.
 
 ## Credits
 Akseli
