@@ -172,6 +172,7 @@ function update()
   enemies.forEachExists(function(enemy) {
       enemy.rotation = game.physics.arcade.angleToXY(enemy, player.x, player.y);
 
+      if (Phaser.Math.distance(player.x, player.y, enemy.x, enemy.y) < 400) {
         fireEnemyProjectile(enemy.x, enemy.y, enemy.id);
       }
     });
