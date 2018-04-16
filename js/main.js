@@ -117,9 +117,12 @@ function create()
   spawnEnemy(spawnPoints.getAt(1).x, spawnPoints.getAt(1).y);
   spawnEnemy(spawnPoints.getAt(2).x, spawnPoints.getAt(2).y);
   spawnPickup(spawnPoints.getAt(3).x, spawnPoints.getAt(3).y);
+<<<<<<< HEAD
 
 
 
+=======
+>>>>>>> a9da7570e8388abddc5e727461224d5315a62378
 }
 
 function update()
