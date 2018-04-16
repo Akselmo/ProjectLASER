@@ -13,6 +13,7 @@ function preload()
   game.load.image('projectile', 'sprites/projectile.png');
   game.load.image('enemy', 'sprites/enemytest.png');
   game.load.image('spawnPoint', 'sprites/spawnPoint.png');
+  game.load.image('healthPickup', 'sprites/healthpickup.png');
 }
 
 
@@ -53,6 +54,11 @@ function create()
   enemies.enableBody = true;
 
 
+  // Create group for pickups
+  pickups = game.add.group();
+  pickups.physicsBodyType = Phaser.Physics.ARCADE;
+  pickups.enableBody = true;
+
   // Create projectiles
   projectiles = game.add.group();
   projectiles.enableBody = true;
@@ -78,7 +84,7 @@ function create()
   //Player sprite so the map generator can place the player in a random place
 
 
-  spawnPointsAmount = 3;
+  spawnPointsAmount = 4;
   spawnPoints = game.add.group();
 
   for (i = 0; i < spawnPointsAmount; i++) {
@@ -96,6 +102,7 @@ function create()
   game.world.bringToTop(spawnPoints);
   game.world.bringToTop(player);
   game.world.bringToTop(enemies);
+  game.world.bringToTop(pickups);
   game.world.bringToTop(projectiles);
   game.world.bringToTop(enemyProjectiles);
 
@@ -105,20 +112,27 @@ function create()
 
 
   // Spawn testing
+  //Needs to be automated!
   spawnEnemy(spawnPoints.getAt(0).x, spawnPoints.getAt(0).y);
   spawnEnemy(spawnPoints.getAt(1).x, spawnPoints.getAt(1).y);
   spawnEnemy(spawnPoints.getAt(2).x, spawnPoints.getAt(2).y);
+  spawnPickup(spawnPoints.getAt(3).x, spawnPoints.getAt(3).y);
+
+
+
 }
 
 function update()
 {
   //Check collisions
   game.physics.arcade.collide(player, this.map.walls);
+  game.physics.arcade.collide(enemies, this.map.walls);
 
   game.physics.arcade.overlap(enemies, projectiles, hitEnemy, null, this);
 
   game.physics.arcade.overlap(player, enemyProjectiles, hitPlayer, null, this);
 
+  game.physics.arcade.overlap(player, pickups, pickupEffect);
 
   game.physics.arcade.overlap(player, enemies, contactDamage, null, this);
   game.physics.arcade.overlap(projectiles, this.map.walls, resetProjectile);
@@ -174,6 +188,10 @@ function update()
 
       if (Phaser.Math.distance(player.x, player.y, enemy.x, enemy.y) < 400) {
         fireEnemyProjectile(enemy.x, enemy.y, enemy.id);
+        followPlayer(enemy, true);
+      }
+      else{
+        followPlayer(enemy, false);
       }
     });
 
@@ -200,10 +218,6 @@ function fireProjectile() {
 }
 
 
-
-
-
-
 function fireEnemyProjectile(x, y, enemyID) {
 
   //projectile = enemyProjectiles.getAt(enemyID).getFirstExists(false);
@@ -212,10 +226,23 @@ function fireEnemyProjectile(x, y, enemyID) {
     projectile.reset(x, y); // Projectile origin point
     game.physics.arcade.moveToObject(projectile, player, 600);
   }
+
 }
 
 
+function followPlayer(enemyID, enabled)
+{
+  if (enabled == true)
+  {
+    game.physics.arcade.moveToObject(enemyID,player,100);
+    
+  }
+  else
+  {
+    game.physics.arcade.moveToObject(enemyID,player,0);
+  }
 
+}
 
 
 function hitEnemy(enemy, projectile) {
@@ -231,6 +258,18 @@ function contactDamage() {
   player.damage(1);
 }
 
+
+function pickupEffect(player, pickup)
+{
+
+  //Can add more randomized pickup effects here
+
+  if (player.health != player.maxHealth)
+  {
+    player.heal(20);
+  }
+  pickup.kill();
+}
 
 
 
@@ -251,10 +290,10 @@ function touchUp() {
 
 
 function spawnEnemy(x, y) {
-   enemy = enemies.create(x, y, 'enemy');
-   enemy.anchor.set(0.5);
-   enemy.id = enemyID;
-   enemyID++;
+  enemy = enemies.create(x, y, 'enemy');
+  enemy.anchor.set(0.5);
+  enemy.id = enemyID;
+  enemyID++;
   enemies.set(enemy, 'health', 5);
   enemies.set(enemy, 'checkWorldBounds', true);
 
@@ -275,7 +314,11 @@ function spawnEnemy(x, y) {
 }
 
 
+function spawnPickup(x, y)
+{
+  pickup = pickups.create(x, y, 'healthPickup');
 
+}
 
 
 
