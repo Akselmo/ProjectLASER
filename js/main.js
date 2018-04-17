@@ -1,17 +1,39 @@
 game = new Phaser.Game(1280, 768, Phaser.AUTO, 'gameDiv', { preload: preload, create: create, update: update, render: render });
 mouseTouchDown = false;
 enemyID = 0;
+var wall;
+var floor;
 
 function preload()
 {
   game.time.advancedTiming = true;
   //Floor tile needs to be twice as big as wall! This can be done by tiling (2x2) the floor texture!
   //Wall 128x128, floor 256x256
-  game.load.image('wall', 'sprites/Swall1.png');
-  game.load.image('floor', 'sprites/Sfloor4.png');
+  //Walls
+  game.load.image('wall1', 'sprites/wall1.png');
+  game.load.image('wall2', 'sprites/wall2.png');
+  game.load.image('wall3', 'sprites/wall3.png');
+  game.load.image('wall4', 'sprites/wall4.png');
+  game.load.image('wall5', 'sprites/wall5.png');
+  game.load.image('planetwall1', 'sprites/planetwall1.png');
+  game.load.image('planetwall2', 'sprites/planetwall2.png');
+  //Floors
+  game.load.image('floor1', 'sprites/floor1.png');
+  game.load.image('floor2', 'sprites/floor2.png');
+  game.load.image('floor3', 'sprites/floor3.png');
+  game.load.image('floor4', 'sprites/floor4.png');
+  game.load.image('floor5', 'sprites/floor5.png');
+  game.load.image('floor6', 'sprites/floor6.png');
+  game.load.image('planetfloor1', 'sprites/planetfloor1.png');
+  game.load.image('planetfloor2', 'sprites/planetfloor2.png');
+  game.load.image('planetfloor3', 'sprites/planetfloor3.png');
+  game.load.image('planetfloor4', 'sprites/planetfloor4.png');
+  //Player
   game.load.image('player', 'sprites/player.png');
   game.load.image('projectile', 'sprites/projectile.png');
+  //Enemy/enemies
   game.load.image('enemy', 'sprites/enemytest.png');
+  //Pickups+misc
   game.load.image('spawnPoint', 'sprites/spawnPoint.png');
   game.load.image('healthPickup', 'sprites/healthpickup.png');
 }
@@ -94,8 +116,11 @@ function create()
   //spawnPoint2 = spawnPoints.create(0, 0, 'spawnPoint');
   //spawnPoint3 = spawnPoints.create(0, 0, 'spawnPoint');
 
+  //Randomizes the levels sprites, this must be done before creating level!
+  randomizeLevelSprites();
 
-  this.map = new Map('floor', 'wall', 2, 5, 10, player, spawnPoints, 3);
+  //Level generation
+  this.map = new Map(floor, wall, 2, 5, 10, player, spawnPoints, 3);
   this.game.physics.game.world.setBounds(0,0,3000,3000);
 
   //Bring other sprites to top
@@ -117,12 +142,7 @@ function create()
   spawnEnemy(spawnPoints.getAt(1).x, spawnPoints.getAt(1).y);
   spawnEnemy(spawnPoints.getAt(2).x, spawnPoints.getAt(2).y);
   spawnPickup(spawnPoints.getAt(3).x, spawnPoints.getAt(3).y);
-<<<<<<< HEAD
 
-
-
-=======
->>>>>>> a9da7570e8388abddc5e727461224d5315a62378
 }
 
 function update()
@@ -324,8 +344,6 @@ function spawnPickup(x, y)
 }
 
 
-
-
 // WIP: make X and Y random, max values defined by map size
 function spawnEnemyPrototype(x, y) {
   enemy = enemies.create(x, y, 'enemy');
@@ -335,5 +353,21 @@ function spawnEnemyPrototype(x, y) {
     enemy.kill();
     // WIP: make the modifiers random / semi-random
     spawnEnemy(x + 100, y + 100);
+  }
+}
+
+function randomizeLevelSprites()
+{
+  var station = Math.floor((Math.random() * 2));
+
+  if (station == 1)
+  {
+    wall = "wall"+Math.floor((Math.random() * 5)+1);
+    floor = "floor"+Math.floor((Math.random() * 6)+1);
+  }
+  else
+  {
+    wall = "planetwall"+Math.floor((Math.random() * 2)+1);
+    floor = "planetfloor"+Math.floor((Math.random() * 4)+1);
   }
 }
