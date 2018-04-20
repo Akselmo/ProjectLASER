@@ -279,10 +279,14 @@ function fireProjectile() {
 
 function followPlayer(enemyID, enabled)
 {
-  if (enabled == true && player.exists == true && Phaser.Math.distance(player.x, player.y, enemyID.x, enemyID.y) > 100)
+  if (enabled == true && player.exists == true && Phaser.Math.distance(player.x, player.y, enemyID.x, enemyID.y) > 200)
   {
     game.physics.arcade.moveToObject(enemyID, player, 100);
-
+  }
+  //Fake pushing and avoiding player so the enemy doesn't get stuck to player
+  else if (enabled == true && player.exists == true && Phaser.Math.distance(player.x, player.y, enemyID.x, enemyID.y) < 50)
+  {
+    game.physics.arcade.moveToObject(enemyID, player, -150);
   }
   else
   {
