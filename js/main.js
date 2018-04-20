@@ -2,7 +2,7 @@ game = new Phaser.Game(900, 900, Phaser.AUTO, 'gameDiv', { preload: preload, cre
 
 var enemyID = 0;
 //enemyID and mouseTouchDown are global so they refresh between state reloads
-game.global = 
+game.global =
 {
   mouseTouchDown: false,
   playerHealth: 100,
@@ -78,7 +78,7 @@ function create()
   player.body.allowRotation = false;
   //Health is now global and shared between states
   player.health = game.global.playerHealth;
-  
+
 
 
   // Create a group for enemies
@@ -130,7 +130,7 @@ function create()
 
   //Level generation
   map = new Map(floor, wall, 2, 5, 10, player, spawnPoints);
-  game.physics.game.world.setBounds(0,0,3000,3000);
+  game.physics.game.world.setBounds(0, 0, 3000, 3000);
   mapwalls = map.walls;
 
   //Bring other sprites to top
@@ -146,6 +146,7 @@ function update()
   //Check collisions
   game.physics.arcade.collide(player, map.walls);
   game.physics.arcade.collide(enemies, map.walls);
+  game.physics.arcade.collide(enemies, enemies);
 
   game.physics.arcade.overlap(enemies, projectiles, hitEnemy, null, this);
 
@@ -198,11 +199,13 @@ function update()
   }
 
 
+
+
   // Enemies aim and shoot at the player
   enemies.forEachExists(function(enemy) {
       enemy.rotation = game.physics.arcade.angleToXY(enemy, player.x, player.y);
 
-      if (Phaser.Math.distance(player.x, player.y, enemy.x, enemy.y) < 400) {
+      if (Phaser.Math.distance(player.x, player.y, enemy.x, enemy.y) < 400 && player.exists == true) {
         fireEnemyProjectile(enemy.x, enemy.y, enemy.id);
         followPlayer(enemy, true);
       }
@@ -210,6 +213,20 @@ function update()
         followPlayer(enemy, false);
       }
   });
+
+
+  function fireEnemyProjectile(x, y, enemyID) {
+    //projectile = enemyProjectiles.getAt(enemyID).getFirstExists(false);
+    projectile = enemyProjectiles[enemyID].getFirstExists(false);
+    if (projectile && enemies.getAt(enemyID).readyToFire == true) {
+      projectile.reset(x, y); // Projectile origin point
+      game.physics.arcade.moveToObject(projectile, player, 600); // Projectile speed
+      enemies.getAt(enemyID).readyToFire = false;
+    }
+  }
+
+
+
 
   //Checking how many enemies total, show portal if 0
   if (enemies.total > 0)
@@ -220,7 +237,7 @@ function update()
   {
     portals.visible = true;
   }
-  
+
   //Update player health
   game.global.playerHealth = player.health;
 
@@ -251,35 +268,25 @@ function resetProjectile(projectile) {
 
 function fireProjectile() {
   projectile = projectiles.getFirstExists(false);
-  if (projectile) {
+  if (projectile && player.exists == true) {
     projectile.reset(player.x, player.y); // Projectile origin point
     game.physics.arcade.moveToPointer(projectile, 600); // Projectile speed
   }
 }
 
 
-function fireEnemyProjectile(x, y, enemyID) {
-
-  //projectile = enemyProjectiles.getAt(enemyID).getFirstExists(false);
-  projectile = enemyProjectiles[enemyID].getFirstExists(false);
-  if (projectile) {
-    projectile.reset(x, y); // Projectile origin point
-    game.physics.arcade.moveToObject(projectile, player, 600);
-  }
-
-}
 
 
 function followPlayer(enemyID, enabled)
 {
-  if (enabled == true)
+  if (enabled == true && player.exists == true && Phaser.Math.distance(player.x, player.y, enemyID.x, enemyID.y) > 100)
   {
-    game.physics.arcade.moveToObject(enemyID,player,100);
-    
+    game.physics.arcade.moveToObject(enemyID, player, 100);
+
   }
   else
   {
-    game.physics.arcade.moveToObject(enemyID,player,0);
+    game.physics.arcade.moveToObject(enemyID, player, 0);
   }
 
 }
@@ -331,7 +338,9 @@ function spawnEnemy(x, y) {
   enemies.set(enemy, 'health', 5);
   enemies.set(enemy, 'checkWorldBounds', true);
 
-
+  // The enemy can only shoot once every half a second
+  enemy.readyToFire = true;
+  game.time.events.loop(Phaser.Timer.SECOND / 2, prepareToShoot, this, enemy.id);
 
   // Create projectile array for the enemy
   enemyProj = game.add.group();
@@ -346,6 +355,11 @@ function spawnEnemy(x, y) {
   //enemyProjectiles.add(enemyProj);
   enemyProjectiles.push(enemyProj);
 }
+
+function prepareToShoot(id) {
+  enemies.getAt(id).readyToFire = true;
+}
+
 
 
 function spawnPickup(x, y)
@@ -401,12 +415,12 @@ function randomizeLevelSprites()
 
 function randomizeLevelObjects()
 {
-  
+
   spawnPointsAmount = Math.floor((Math.random() * 7)+3);
 
   console.log('spawnpointsamount: ' + spawnPointsAmount);
 
-  for (i = 0; i < spawnPointsAmount; i++) 
+  for (i = 0; i < spawnPointsAmount; i++)
   {
     spawnPoint = spawnPoints.create(0, 0, 'spawnPoint');
   }
@@ -440,7 +454,7 @@ function createNewLevel()
 
   //Level generation
   map = new Map(floor, wall, 2, 5, 10, player, spawnPoints);
-  game.physics.game.world.setBounds(0,0,3000,3000);
+  game.physics.game.world.setBounds(0, 0, 3000, 3000);
   mapwalls = map.walls;
 
   //Bring other sprites to top
