@@ -17,6 +17,8 @@ bootGame.prototype.create = function()
     //fps
     game.time.advancedTiming = true;
 
+
+
 }
 
 bootGame.prototype.preload = function() {}
