@@ -1,18 +1,26 @@
 game = new Phaser.Game(900, 900, Phaser.AUTO, 'gameDiv', { preload: preload, create: create, update: update, render: render });
 
 var enemyID = 0;
+var bmd;
+var fogCircle;
+var fringe;
+
 //enemyID and mouseTouchDown are global so they refresh between state reloads
 game.global =
 {
   mouseTouchDown: false,
   playerHealth: 100,
-  enemyID: 0
+  enemyID: 0,
+  bmd: null,
+  fogCircle: null,
+  fringe: null
 }
 
 
 function preload()
 {
   enemyID = game.global.enemyID;
+
 
   game.time.advancedTiming = true;
   //Floor tile needs to be twice as big as wall! This can be done by tiling (2x2) the floor texture!
@@ -139,10 +147,22 @@ function create()
   // Spawns
   addLevelSpawns();
 
+  //FogOfWar
+  bmd = game.make.bitmapData(900, 900);
+  fogCircle = new Phaser.Circle(450, 450, 800);
+  fringe = 65;
+  var fogSprite = bmd.addToWorld();
+  fogSprite.fixedToCamera = true;
+  updateFog();
+  
+
 }
 
 function update()
 {
+  fogCircle.x = player.x;
+  fogCircle.y = player.y;
+
   //Check collisions
   game.physics.arcade.collide(player, map.walls);
   game.physics.arcade.collide(enemies, map.walls);
@@ -279,7 +299,7 @@ function fireProjectile() {
 
 function followPlayer(enemyID, enabled)
 {
-  if (enabled == true && player.exists == true && Phaser.Math.distance(player.x, player.y, enemyID.x, enemyID.y) > 200)
+  if (enabled == true && player.exists == true && Phaser.Math.distance(player.x, player.y, enemyID.x, enemyID.y) > 100)
   {
     game.physics.arcade.moveToObject(enemyID, player, 100);
   }
@@ -473,4 +493,24 @@ function startNewLevel()
 {
   console.log(game.state.current);
   game.state.start(game.state.current);
+}
+
+function updateFog()
+{
+  var gradient = bmd.context.createRadialGradient(
+    fogCircle.x - game.camera.x,
+    fogCircle.y - game.camera.y,
+    fogCircle.radius,
+    fogCircle.x - game.camera.x,
+    fogCircle.y - game.camera.y,
+    fogCircle.radius - fringe
+  );
+
+  gradient.addColorStop(0, 'rgba(0,0,0,0.95');
+  gradient.addColorStop(0.4, 'rgba(0,0,0,0.5');
+  gradient.addColorStop(1, 'rgba(0,0,0,0');
+
+  bmd.clear();
+  bmd.context.fillStyle = gradient;
+  bmd.context.fillRect(0, 0, 900, 900);
 }

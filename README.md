@@ -36,7 +36,7 @@ All the sounds go here. Organize them aswell.
 Every sprint has it's own branch. Use the current sprint's branch when making the project. Master will be updated after every sprint.
 
 ## Credits
-Akseli
+[Akseli Lahtinen](https://akselmo.github.io/)
 
 Aleksi
 
