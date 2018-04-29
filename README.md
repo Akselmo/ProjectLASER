@@ -38,8 +38,8 @@ Every sprint has it's own branch. Use the current sprint's branch when making th
 ## Credits
 [Akseli Lahtinen](https://akselmo.github.io/)
 
-Aleksi
+Aleksi Alajoki
 
 [Anne Peltola](https://lanttux.github.io/)
 
-Noora
+[Noora Virtala](https://noovir.github.io/)
