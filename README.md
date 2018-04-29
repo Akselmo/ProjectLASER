@@ -40,6 +40,6 @@ Every sprint has it's own branch. Use the current sprint's branch when making th
 
 Aleksi
 
-Anne
+[Anne Peltola](https://lanttux.github.io/)
 
 Noora
