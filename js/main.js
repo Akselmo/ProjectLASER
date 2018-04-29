@@ -4,6 +4,8 @@ var enemyID = 0;
 var bmd;
 var fogCircle;
 var fringe;
+var playerHasRifle = false;
+var playerRifleAmmo = 0;
 
 //enemyID and mouseTouchDown are global so they refresh between state reloads
 game.global =
@@ -17,7 +19,9 @@ game.global =
   playerX: 0,
   playerY: 0,
   playerDied: false,
-  station: 0
+  station: 0,
+  playerHasRifle: false,
+  playerRifleAmmo: 0
 }
 
 
@@ -52,6 +56,7 @@ function preload()
   game.load.spritesheet("player", "sprites/spaceman.png", 128, 128);
   game.load.spritesheet("playerDeath", "sprites/spacemankuolema.png", 128, 128);
   game.load.spritesheet("projectile", "sprites/GunBullet2s16x16.png", 16, 16);
+  game.load.spritesheet("projectile2", "sprites/GunBullet1s16x16.png", 16, 16);
 
 
   //Enemies
@@ -63,6 +68,7 @@ function preload()
   //Pickups+misc
   game.load.image('spawnPoint', 'sprites/spawnPoint.png');
   game.load.image('healthPickup', 'sprites/healthpickup.png');
+  game.load.image('ammoPickup', 'sprites/ammopickup.png');
   game.load.spritesheet('portal', 'sprites/portal80x128.png', 80, 128, 10);
 
 }
@@ -99,10 +105,16 @@ function create()
   player.body.allowRotation = false;
   //Health is now global and shared between states
   player.health = game.global.playerHealth;
+  //PistolAnims
   playerAnimDown = player.animations.add('playerAnimDown', [16, 17, 18, 19]);
   playerAnimUp = player.animations.add('playerAnimUp', [20, 21, 22, 23]);
   playerAnimLeft = player.animations.add('playerAnimLeft', [8, 9, 10, 11]);
   playerAnimRight = player.animations.add('playerAnimRight', [28, 29, 30, 31]);
+  //RifleAnims
+  playerAnimDownRifle = player.animations.add('playerAnimDownRifle', [0, 1, 2, 3]);
+  playerAnimUpRifle = player.animations.add('playerAnimUpRifle', [4, 5, 6, 7]);
+  playerAnimLeftRifle = player.animations.add('playerAnimLeftRifle', [24, 25, 26, 27]);
+  playerAnimRightRifle = player.animations.add('playerAnimRightRifle', [12, 13, 14, 15]);
   player.moving = false;
   player.anim = "left";
 
@@ -115,9 +127,12 @@ function create()
 
 
   // Create group for pickups
-  pickups = game.add.group();
-  pickups.physicsBodyType = Phaser.Physics.ARCADE;
-  pickups.enableBody = true;
+  healthPickups = game.add.group();
+  healthPickups.physicsBodyType = Phaser.Physics.ARCADE;
+  healthPickups.enableBody = true;
+  ammoPickups = game.add.group();
+  ammoPickups.physicsBodyType = Phaser.Physics.ARCADE;
+  ammoPickups.enableBody = true;
 
   // Create group for portal
   portals = game.add.group();
@@ -192,7 +207,8 @@ function update()
 
   game.physics.arcade.overlap(player, enemyProjectiles, hitPlayer, null, this);
 
-  game.physics.arcade.overlap(player, pickups, pickupEffect);
+  game.physics.arcade.overlap(player, healthPickups, pickupHealthEffect);
+  game.physics.arcade.overlap(player, ammoPickups, pickupAmmoEffect);
 
   game.physics.arcade.overlap(player, portals, portalEffect);
 
@@ -230,47 +246,119 @@ function update()
   }
   game.camera.follow(player);
 
+
   // Player walking animations
   coordSum = parseFloat(game.input.mousePointer.y) + parseFloat(game.input.mousePointer.x);
   coordSub = parseFloat(game.input.mousePointer.y) - parseFloat(game.input.mousePointer.x);
   if (player.moving == true) {
     if (coordSum <= 825 && coordSub >= -100) {
-      player.animations.play("playerAnimLeft", 5, true);
-      player.anim = "left";
+      if (playerHasRifle === true)
+      {
+        player.animations.play("playerAnimLeftRifle", 5, true);
+        player.anim = "leftRifle";
+      }
+      else
+      {
+        player.animations.play("playerAnimLeft", 5, true);
+        player.anim = "left";
+      }
+
     }
     else if (coordSum >= 880 && coordSub >= -150) {
-      player.animations.play("playerAnimDown", 5, true);
-      player.anim = "down";
+      if (playerHasRifle === true)
+      {
+        player.animations.play("playerAnimDownRifle", 5, true);
+        player.anim = "downRifle";
+      }
+      else
+      {
+        player.animations.play("playerAnimDown", 5, true);
+        player.anim = "down";
+      }
+
     }
     else if (coordSum >= 880 && (coordSub >= -130 || coordSub <= -130)) {
-      player.animations.play("playerAnimRight", 5, true);
-      player.anim = "right";
+      if (playerHasRifle === true)
+      {
+        player.animations.play("playerAnimRightRifle", 5, true);
+        player.anim = "rightRifle";
+      }
+      else
+      {
+        player.animations.play("playerAnimRight", 5, true);
+        player.anim = "right";
+      }
+
     }
     else if (coordSum <= 935 && coordSub <= -150) {
-      player.animations.play("playerAnimUp", 5, true);
-      player.anim = "up";
+      if (playerHasRifle === true)
+      {
+        player.animations.play("playerAnimUpRifle", 5, true);
+        player.anim = "upRifle";
+      }
+      else
+      {
+        player.animations.play("playerAnimUp", 5, true);
+        player.anim = "up";
+      }
+
     }
   }
   else {
     if (coordSum <= 850 && coordSub >= -130) {
       //player.animations.play("playerAnimLeft", 5, true);
-      player.frame = 9;
-      player.anim = "left";
+
+      if (playerHasRifle === true)
+      {
+        player.anim = "leftRifle";
+        player.frame = 26;
+      }
+      else
+      {
+        player.anim = "left";
+        player.frame = 9;
+      }
+
     }
     else if (coordSum >= 800 && coordSub >= -150) {
       //player.animations.play("playerAnimDown", 5, true);
-      player.frame = 16;
-      player.anim = "down";
+
+      if (playerHasRifle === true)
+      {
+        player.anim = "downRifle";
+        player.frame = 0;
+      }
+      else
+      {
+        player.anim = "down";
+        player.frame = 16;
+      }
     }
     else if (coordSum >= 880 && (coordSub >= -130 || coordSub <= -130)) {
       //player.animations.play("playerAnimRight", 5, true);
-      player.frame = 29;
-      player.anim = "right";
+      if (playerHasRifle === true)
+      {
+        player.anim = "rightRifle";
+        player.frame = 13;
+      }
+      else
+      {
+        player.anim = "right";
+        player.frame = 29;
+      }
     }
     else if (coordSum <= 935 && coordSub <= -130) {
       //player.animations.play("playerAnimUp", 5, true);
-      player.frame = 20;
-      player.anim = "up";
+      if (playerHasRifle === true)
+      {
+        player.anim = "upRifle";
+        player.frame = 4;
+      }
+      else
+      {
+        player.anim = "up";
+        player.frame = 20;
+      }
     }
   }
 
@@ -288,6 +376,7 @@ function update()
   // Testing level creation
   if (One.isDown) {
     startNewLevel();
+    player.heal(100);
   }
 
 
@@ -398,19 +487,32 @@ function update()
   //Update player health
   game.global.playerHealth = player.health;
 
+  
+  //Checking if player has rifle ammo
+  if (playerRifleAmmo > 0)
+  {
+    playerHasRifle = true;
+  }
+  else if (playerRifleAmmo<= 0)
+  {
+    playerHasRifle = false;
+  }
+
 }
 
 function render()
 {
 	game.debug.text('FPS: ' + game.time.fps, 2, 14, "#00ff00");
   game.debug.text('Player health: ' + player.health, 2, 28, "#00ff00");
-  game.debug.text('Enemies left: ' + enemies.total, 2, 42, "#00ff00");
+  //game.debug.text('Enemies left: ' + enemies.total, 2, 42, "#00ff00");
+  game.debug.text('Rifle ammo left: ' + playerRifleAmmo, 2, 42, "#00ff00");
 }
 
 function bringToTop()
 {
   game.world.bringToTop(spawnPoints);
-  game.world.bringToTop(pickups);
+  game.world.bringToTop(healthPickups);
+  game.world.bringToTop(ammoPickups);
   game.world.bringToTop(projectiles);
   game.world.bringToTop(portals);
   game.world.bringToTop(player);
@@ -426,8 +528,30 @@ function resetProjectile(projectile) {
 // Fire player projectile
 function fireProjectile() {
   projectile = projectiles.getFirstExists(false);
-  if (projectile && player.exists == true) {
+  if (playerHasRifle == true && projectile && player.exists == true) {
+    projectile.loadTexture('projectile2',1);
 
+    if (player.anim == "leftRifle") {
+      projectile.reset(player.x - 56, player.y - 23);
+    }
+    else if (player.anim == "rightRifle") {
+      projectile.reset(player.x + 60, player.y - 4);
+    }
+    else if (player.anim == "downRifle") {
+      game.world.bringToTop(projectiles);
+      projectile.reset(player.x - 5, player.y);
+    }
+    else {
+      game.world.bringToTop(player);
+      projectile.reset(player.x, player.y - 25);
+    }
+    //projectile.reset(player.x - 48, player.y - 23); // Projectile origin point
+    game.physics.arcade.moveToPointer(projectile, 600); // Projectile speed
+    projectile.rotation = game.physics.arcade.angleToPointer(projectile);
+    playerRifleAmmo -= 1;
+  }
+  else if (projectile && player.exists == true) {
+    projectile.loadTexture('projectile',1);
     if (player.anim == "left") {
       projectile.reset(player.x - 56, player.y - 23);
     }
@@ -471,12 +595,21 @@ function followPlayer(enemyID, enabled)
 
 
 function hitEnemy(enemy, projectile) {
-  enemy.damage(1);
+  if (playerHasRifle === true)
+  {
+    enemy.damage(3);
+    console.log('rifle damage');
+  }
+  else
+  {
+    enemy.damage(1);
+    console.log('pistol damage');
+  }
   projectile.kill();
 }
 
 function hitPlayer(player, projectile) {
-  player.damage(5);
+  player.damage(4);
   projectile.kill();
 }
 function contactDamage() {
@@ -484,17 +617,24 @@ function contactDamage() {
 }
 
 
-function pickupEffect(player, pickup)
+function pickupHealthEffect(player, healthPickup)
 {
-
-  //Can add more randomized pickup effects here
 
   if (player.health != player.maxHealth)
   {
     player.heal(20);
   }
-  pickup.kill();
+  healthPickup.kill();
 }
+
+function pickupAmmoEffect(player, ammoPickup)
+{
+
+  playerRifleAmmo += 30;
+
+  ammoPickup.kill();
+}
+
 
 function touchDown() {
 	// Set touchDown to true, so we only trigger this once
@@ -618,7 +758,19 @@ function prepareToShoot(id) {
 
 function spawnPickup(x, y)
 {
-  pickup = pickups.create(x, y, 'healthPickup');
+  var whichPickup = Math.floor((Math.random() * 2));
+
+  if (whichPickup == 1)
+  {
+    healthPickup = healthPickups.create(x, y, 'healthPickup');
+    console.log("Spawned health");
+  }
+  else
+  {
+    ammoPickup = ammoPickups.create(x, y, 'ammoPickup');
+    console.log("Spawned ammo");
+  }
+
 
 }
 
@@ -686,7 +838,7 @@ function addLevelSpawns()
   for (i = 1; i < spawnPointsAmount; i++)
   {
     var whichObject = Math.floor((Math.random() * 5))
-    if (whichObject <= 4)
+    if (whichObject <= 2)
     {
       spawnEnemy(spawnPoints.getAt(i).x, spawnPoints.getAt(i).y);
     }
