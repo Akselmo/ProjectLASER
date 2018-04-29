@@ -13,7 +13,11 @@ game.global =
   enemyID: 0,
   bmd: null,
   fogCircle: null,
-  fringe: null
+  fringe: null,
+  playerX: 0,
+  playerY: 0,
+  playerDied: false,
+  station: 0
 }
 
 
@@ -44,15 +48,23 @@ function preload()
   game.load.image('planetfloor2', 'sprites/planetfloor2.png');
   game.load.image('planetfloor3', 'sprites/planetfloor3.png');
   game.load.image('planetfloor4', 'sprites/planetfloor4.png');
-  //Player
-  game.load.image('player', 'sprites/player.png');
-  game.load.image('projectile', 'sprites/projectile.png');
-  //Enemy/enemies
-  game.load.image('enemy', 'sprites/enemytest.png');
+  //Player + projectile
+  game.load.spritesheet("player", "sprites/spaceman.png", 128, 128);
+  game.load.spritesheet("playerDeath", "sprites/spacemankuolema.png", 128, 128);
+  game.load.spritesheet("projectile", "sprites/GunBullet2s16x16.png", 16, 16);
+
+
+  //Enemies
+  game.load.spritesheet("bugMonster", "sprites/ötökkä.png", 128, 128);
+  game.load.spritesheet("robotMonster", "sprites/robotti.png", 128, 128);
+
+  game.load.spritesheet("bugMonsterBullet", "sprites/BugEnemyFire32x32.png", 32, 32);
+  game.load.spritesheet("robotMonsterBullet", "sprites/enemtBulletR32x64.png", 32, 32);
   //Pickups+misc
   game.load.image('spawnPoint', 'sprites/spawnPoint.png');
   game.load.image('healthPickup', 'sprites/healthpickup.png');
   game.load.spritesheet('portal', 'sprites/portal80x128.png', 80, 128, 10);
+
 }
 
 
@@ -79,6 +91,7 @@ function create()
 
 
   // Create player
+  // Create player
   player = game.add.sprite(100, 100, 'player');
   game.physics.arcade.enable(player);
   player.body.collideWorldBounds = true;
@@ -86,6 +99,12 @@ function create()
   player.body.allowRotation = false;
   //Health is now global and shared between states
   player.health = game.global.playerHealth;
+  playerAnimDown = player.animations.add('playerAnimDown', [16, 17, 18, 19]);
+  playerAnimUp = player.animations.add('playerAnimUp', [20, 21, 22, 23]);
+  playerAnimLeft = player.animations.add('playerAnimLeft', [8, 9, 10, 11]);
+  playerAnimRight = player.animations.add('playerAnimRight', [28, 29, 30, 31]);
+  player.moving = false;
+  player.anim = "left";
 
 
 
@@ -111,6 +130,7 @@ function create()
   projectiles.physicsBodyType = Phaser.Physics.ARCADE;
   // Create several projectiles for use
   projectiles.createMultiple(50, 'projectile');
+  projectiles.setAll('frame', 1);
   // Execute the reset function for each projectile that goes out of the world bounds
   projectiles.callAll('events.onOutOfBounds.add', 'events.onOutOfBounds', resetProjectile);
   projectiles.callAll('anchor.setTo','anchor', 0.5, 1.0);
@@ -149,12 +169,12 @@ function create()
 
   //FogOfWar
   bmd = game.make.bitmapData(900, 900);
-  fogCircle = new Phaser.Circle(450, 450, 800);
+  fogCircle = new Phaser.Circle(450, 500, 800);
   fringe = 65;
   var fogSprite = bmd.addToWorld();
   fogSprite.fixedToCamera = true;
   updateFog();
-  
+
 
 }
 
@@ -182,22 +202,87 @@ function update()
 
 
   // Player controls + camera follows the player
+  playerX = player.x;
+  playerY = player.y;
   player.body.velocity.y = 0;
   player.body.velocity.x = 0;
 
-  if(W_key.isDown) {
+  posSum = parseFloat(game.input.mousePointer.y) + parseFloat(game.input.mousePointer.x);
+  negSum = parseFloat(game.input.mousePointer.y) - parseFloat(game.input.mousePointer.x);
+  if (W_key.isDown) {
     player.body.velocity.y -= 350;
+    player.moving = true;
   }
-  else if(S_key.isDown) {
+  if (S_key.isDown) {
     player.body.velocity.y += 350;
+    player.moving = true;
   }
-  if(A_key.isDown) {
+  if (A_key.isDown) {
     player.body.velocity.x -= 350;
+    player.moving = true;
   }
-  else if(D_key.isDown) {
+  if (D_key.isDown) {
     player.body.velocity.x += 350;
+    player.moving = true;
+  }
+  if (W_key.isDown == false && D_key.isDown == false && S_key.isDown == false && A_key.isDown == false) {
+    player.moving = false;
   }
   game.camera.follow(player);
+
+  // Player walking animations
+  coordSum = parseFloat(game.input.mousePointer.y) + parseFloat(game.input.mousePointer.x);
+  coordSub = parseFloat(game.input.mousePointer.y) - parseFloat(game.input.mousePointer.x);
+  if (player.moving == true) {
+    if (coordSum <= 825 && coordSub >= -100) {
+      player.animations.play("playerAnimLeft", 5, true);
+      player.anim = "left";
+    }
+    else if (coordSum >= 880 && coordSub >= -150) {
+      player.animations.play("playerAnimDown", 5, true);
+      player.anim = "down";
+    }
+    else if (coordSum >= 880 && (coordSub >= -130 || coordSub <= -130)) {
+      player.animations.play("playerAnimRight", 5, true);
+      player.anim = "right";
+    }
+    else if (coordSum <= 935 && coordSub <= -150) {
+      player.animations.play("playerAnimUp", 5, true);
+      player.anim = "up";
+    }
+  }
+  else {
+    if (coordSum <= 850 && coordSub >= -130) {
+      //player.animations.play("playerAnimLeft", 5, true);
+      player.frame = 9;
+      player.anim = "left";
+    }
+    else if (coordSum >= 800 && coordSub >= -150) {
+      //player.animations.play("playerAnimDown", 5, true);
+      player.frame = 16;
+      player.anim = "down";
+    }
+    else if (coordSum >= 880 && (coordSub >= -130 || coordSub <= -130)) {
+      //player.animations.play("playerAnimRight", 5, true);
+      player.frame = 29;
+      player.anim = "right";
+    }
+    else if (coordSum <= 935 && coordSub <= -130) {
+      //player.animations.play("playerAnimUp", 5, true);
+      player.frame = 20;
+      player.anim = "up";
+    }
+  }
+
+
+  // Player death animation
+  if (player.exists == false && game.global.playerDied != true) {
+    playerDeath = game.add.sprite(playerX - 60, playerY - 60,'playerDeath');
+    game.world.bringToTop(enemies);
+    playerDeathAnim = playerDeath.animations.add('playerDeathAnim', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);
+    game.global.playerDied = true;
+    playerDeath.animations.play('playerDeathAnim', 5, false);
+  }
 
 
   // Testing level creation
@@ -205,8 +290,6 @@ function update()
     startNewLevel();
   }
 
-  // Player rotation + shooting
-  player.rotation = game.physics.arcade.angleToPointer(player);
 
   if (game.input.activePointer.isDown) {
     if (!game.global.mouseTouchDown) {
@@ -223,15 +306,68 @@ function update()
 
   // Enemies aim and shoot at the player
   enemies.forEachExists(function(enemy) {
-      enemy.rotation = game.physics.arcade.angleToXY(enemy, player.x, player.y);
 
-      if (Phaser.Math.distance(player.x, player.y, enemy.x, enemy.y) < 400 && player.exists == true) {
-        fireEnemyProjectile(enemy.x, enemy.y, enemy.id);
-        followPlayer(enemy, true);
+    enemyCoordDiv = (Math.floor(enemy.x) / Math.floor(player.x)) / (Math.floor(player.y) / Math.floor(enemy.y)) * 100;
+    enemyCoordMult = (Math.floor(enemy.x) / Math.floor(player.x)) * (Math.floor(player.y) / Math.floor(enemy.y)) * 100;
+    if (Phaser.Math.distance(player.x, player.y, enemy.x, enemy.y) < 400 && player.exists == true && enemy.isDead == false) {
+      //fireEnemyProjectile(enemy.x, enemy.y, enemy.id);
+
+      if (enemyCoordDiv < 100 && enemyCoordMult < 100) {
+        enemy.animations.play("attackAnimRight", 5, true);
       }
-      else{
-        followPlayer(enemy, false);
+      else if (enemyCoordDiv > 100 && enemyCoordMult < 100) {
+        enemy.animations.play("attackAnimUp", 5, true);
       }
+      else if (enemyCoordDiv > 100 && enemyCoordMult > 100) {
+        enemy.animations.play("attackAnimLeft", 5, true);
+        //enemy.animations.play("enemyDeathAnim", 5, false);
+      }
+      else if (enemyCoordDiv < 100 && enemyCoordMult > 100) {
+        enemy.animations.play("attackAnimDown", 5, true);
+      }
+      fireEnemyProjectile(enemy.x, enemy.y, enemy.id);
+      followPlayer(enemy, true);
+    }
+    else if (enemy.isDead == false) {
+      if (enemyCoordDiv < 100 && enemyCoordMult < 100) {
+        enemy.animations.play("idleAnimRight", 5, true);
+      }
+      else if (enemyCoordDiv > 100 && enemyCoordMult < 100) {
+        enemy.animations.play("idleAnimUp", 5, true);
+      }
+      else if (enemyCoordDiv > 100 && enemyCoordMult > 100) {
+        enemy.animations.play("idleAnimLeft", 5, true);
+      }
+      else if (enemyCoordDiv < 100 && enemyCoordMult > 100) {
+        enemy.animations.play("idleAnimDown", 5, true);
+      }
+      followPlayer(enemy, false);
+    }
+
+    // Enemy death animation
+    if (enemy.health == 1 && enemy.isDead == false) {
+      enemy.alive = false;
+      enemy.isDead = true;
+      enemy.body.velocity.setTo(0,0);
+      enemy.animations.stop();
+      enemy.animations.play("enemyDeathAnim", 5, false);
+      enemy.events.onAnimationComplete.addOnce(function() {
+        enemy.exists = false;
+        enemy.visible = false;
+        enemy.inputEnabled = false;
+        if (enemy.input) {
+          enemy.input.useHandCursor = false;
+        }
+        enemy.events.destroy();
+      }, enemy);
+
+      if (enemy.events) {
+          enemy.events.onKilled$dispatch(this);
+      }
+      return enemy;
+    }
+
+
   });
 
 
@@ -241,6 +377,7 @@ function update()
     if (projectile && enemies.getAt(enemyID).readyToFire == true) {
       projectile.reset(x, y); // Projectile origin point
       game.physics.arcade.moveToObject(projectile, player, 600); // Projectile speed
+      projectile.rotation = game.physics.arcade.angleToXY(projectile, player.x, player.y);
       enemies.getAt(enemyID).readyToFire = false;
     }
   }
@@ -286,11 +423,28 @@ function resetProjectile(projectile) {
   projectile.kill();
 }
 
+// Fire player projectile
 function fireProjectile() {
   projectile = projectiles.getFirstExists(false);
   if (projectile && player.exists == true) {
-    projectile.reset(player.x, player.y); // Projectile origin point
+
+    if (player.anim == "left") {
+      projectile.reset(player.x - 56, player.y - 23);
+    }
+    else if (player.anim == "right") {
+      projectile.reset(player.x + 60, player.y - 4);
+    }
+    else if (player.anim == "down") {
+      game.world.bringToTop(projectiles);
+      projectile.reset(player.x - 5, player.y);
+    }
+    else {
+      game.world.bringToTop(player);
+      projectile.reset(player.x, player.y - 25);
+    }
+    //projectile.reset(player.x - 48, player.y - 23); // Projectile origin point
     game.physics.arcade.moveToPointer(projectile, 600); // Projectile speed
+    projectile.rotation = game.physics.arcade.angleToPointer(projectile);
   }
 }
 
@@ -322,7 +476,7 @@ function hitEnemy(enemy, projectile) {
 }
 
 function hitPlayer(player, projectile) {
-  player.damage(1);
+  player.damage(5);
   projectile.kill();
 }
 function contactDamage() {
@@ -355,14 +509,82 @@ function touchUp() {
 
 
 function spawnEnemy(x, y) {
-  enemy = enemies.create(x, y, 'enemy');
+  //enemy = enemies.create(x, y, 'enemy');
+  //enemy = enemies.create(x, y, 'enemy');
+
+    // Bug monster animations
+  if (game.global.station == 0) {
+
+    enemyColor = Math.floor((Math.random() * 3) + 1);
+
+    enemy = game.add.sprite(x, y,'bugMonster');
+
+    if (enemyColor == 1) {
+      die = enemy.animations.add('enemyDeathAnim', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+
+      idleAnimDown = enemy.animations.add('idleAnimDown', [45, 46, 47]);
+      idleAnimRight = enemy.animations.add('idleAnimRight', [75, 76, 77]);
+      idleAnimUp = enemy.animations.add('idleAnimUp', [105, 106, 107]);
+      idleAnimLeft = enemy.animations.add('idleAnimLeft', [63, 64, 65]);
+
+      attackAnimDown = enemy.animations.add('attackAnimDown', [60, 61, 62]);
+      attackAnimRight = enemy.animations.add('attackAnimRight', [90, 91, 92]);
+      attackAnimUp = enemy.animations.add('attackAnimUp', [48, 49, 50]);
+      attackAnimLeft = enemy.animations.add('attackAnimLeft', [78, 79, 80]);
+    }
+    else if (enemyColor == 2) {
+      die = enemy.animations.add('enemyDeathAnim', [15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27]);
+
+      idleAnimDown = enemy.animations.add('idleAnimDown', [93, 94, 95]);
+      idleAnimRight = enemy.animations.add('idleAnimRight', [51, 52, 53]);
+      idleAnimUp = enemy.animations.add('idleAnimUp', [81, 82, 83]);
+      idleAnimLeft = enemy.animations.add('idleAnimLeft', [111, 112, 113]);
+
+      attackAnimDown = enemy.animations.add('attackAnimDown', [108, 109, 110]);
+      attackAnimRight = enemy.animations.add('attackAnimRight', [66, 67, 68]);
+      attackAnimUp = enemy.animations.add('attackAnimUp', [96, 97, 98]);
+      attackAnimLeft = enemy.animations.add('attackAnimLeft', [54, 55, 56]);
+    }
+    else {
+      die = enemy.animations.add('enemyDeathAnim', [30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42]);
+
+      idleAnimDown = enemy.animations.add('idleAnimDown', [57, 58, 59]);
+      idleAnimRight = enemy.animations.add('idleAnimRight', [72, 73, 74]);
+      idleAnimUp = enemy.animations.add('idleAnimUp', [87, 88, 89]);
+      idleAnimLeft = enemy.animations.add('idleAnimLeft', [114, 115, 116]);
+
+      attackAnimDown = enemy.animations.add('attackAnimDown', [69, 70, 71]);
+      attackAnimRight = enemy.animations.add('attackAnimRight', [84, 85, 86]);
+      attackAnimUp = enemy.animations.add('attackAnimUp', [99, 100, 101]);
+      attackAnimLeft = enemy.animations.add('attackAnimLeft', [102, 103, 104]);
+    }
+  }
+  // Robot monster animations
+  else {
+    //enemyColor = Math.floor((Math.random() * 3) + 1);
+    enemy = game.add.sprite(x, y,'robotMonster');
+
+    die = enemy.animations.add('enemyDeathAnim', [378, 379, 380, 381, 382, 383, 384, 385, 386, 387, 388, 389, 390, 391, 392, 393, 394, 395, 396, 397]);
+
+    idleAnimDown = enemy.animations.add('idleAnimDown', [186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205]);
+    idleAnimRight = enemy.animations.add('idleAnimRight', [218, 219, 220, 221, 222, 223, 224, 225, 226, 227, 228, 229, 230, 231, 232, 233, 234, 235, 236, 237]);
+    idleAnimUp = enemy.animations.add('idleAnimUp', [282, 283, 284, 285, 286, 287, 288, 289, 290, 291, 292, 293, 294, 295, 296, 297, 298, 299, 300]);
+    idleAnimLeft = enemy.animations.add('idleAnimLeft', [250, 251, 252, 253, 254, 255, 256, 257, 258, 259, 260, 261, 262, 263, 264, 265, 266, 267, 268]);
+
+    attackAnimDown = enemy.animations.add('attackAnimDown', [207, 208, 209, 210]);
+    attackAnimRight = enemy.animations.add('attackAnimRight', [239, 240, 241, 242]);
+    attackAnimUp = enemy.animations.add('attackAnimUp', [302, 303, 304, 305]);
+    attackAnimLeft = enemy.animations.add('attackAnimLeft', [270, 271, 272, 273]);
+  }
+  enemies.add(enemy);
   enemy.anchor.set(0.5);
   enemy.id = enemyID;
+  enemy.isDead = false;
   enemyID++;
-  enemies.set(enemy, 'health', 5);
+  enemies.set(enemy, 'health', 6);
   enemies.set(enemy, 'checkWorldBounds', true);
 
-  // The enemy can only shoot once every half a second
+  // The enemy shooting delay
   enemy.readyToFire = true;
   game.time.events.loop(Phaser.Timer.SECOND / 2, prepareToShoot, this, enemy.id);
 
@@ -371,10 +593,18 @@ function spawnEnemy(x, y) {
   enemyProj.enableBody = true;
   enemyProj.physicsBodyType = Phaser.Physics.ARCADE;
   // Create several projectiles for use
-  enemyProj.createMultiple(2, 'projectile');
+  if (game.global.station == 0) {
+    enemyProj.createMultiple(2, 'bugMonsterBullet');
+    enemyProj.setAll('frame', 5);
+  }
+  else {
+    enemyProj.createMultiple(2, 'robotMonsterBullet');
+    enemyProj.setAll('frame', 0);
+  }
   // Execute the reset function for each projectile that goes out of the world bounds
   enemyProj.callAll('events.onOutOfBounds.add', 'events.onOutOfBounds', resetProjectile);
   enemyProj.callAll('anchor.setTo','anchor', 0.5, 1.0);
+  enemyProj.callAll('anchor.setTo','anchor', 0.5, 0.5);
   enemyProj.setAll('checkWorldBounds', true);
   //enemyProjectiles.add(enemyProj);
   enemyProjectiles.push(enemyProj);
@@ -423,9 +653,9 @@ function spawnEnemyPrototype(x, y) {
 
 function randomizeLevelSprites()
 {
-  var station = Math.floor((Math.random() * 2));
+  game.global.station = Math.floor((Math.random() * 2));
 
-  if (station == 1)
+  if (game.global.station == 1)
   {
     wall = "wall"+Math.floor((Math.random() * 5)+1);
     floor = "floor"+Math.floor((Math.random() * 6)+1);
@@ -446,7 +676,7 @@ function randomizeLevelObjects()
 
   for (i = 0; i < spawnPointsAmount; i++)
   {
-    spawnPoint = spawnPoints.create(0, 0, 'spawnPoint');
+    spawnPoint = spawnPoints.create(0, 0, null);
   }
 }
 
