@@ -6,6 +6,10 @@ var fogCircle;
 var fringe;
 var playerHasRifle = false;
 var playerRifleAmmo = 0;
+var music;
+var robotOrBug;
+var musicPlaying = false;
+var playerScore = 0;
 
 //enemyID and mouseTouchDown are global so they refresh between state reloads
 game.global =
@@ -21,7 +25,11 @@ game.global =
   playerDied: false,
   station: 0,
   playerHasRifle: false,
-  playerRifleAmmo: 0
+  playerRifleAmmo: 0,
+  music: null,
+  robotOrBug: null,
+  musicPlaying: false,
+  playerScore: 0
 }
 
 
@@ -33,14 +41,15 @@ function preload()
   game.time.advancedTiming = true;
   //Floor tile needs to be twice as big as wall! This can be done by tiling (2x2) the floor texture!
   //Wall 128x128, floor 256x256
+
   //Walls
   game.load.image('wall1', 'sprites/wall1.png');
   game.load.image('wall2', 'sprites/wall2.png');
   game.load.image('wall3', 'sprites/wall3.png');
   game.load.image('wall4', 'sprites/wall4.png');
-  game.load.image('wall5', 'sprites/wall5.png');
   game.load.image('planetwall1', 'sprites/planetwall1.png');
   game.load.image('planetwall2', 'sprites/planetwall2.png');
+ 
   //Floors
   game.load.image('floor1', 'sprites/floor1.png');
   game.load.image('floor2', 'sprites/floor2.png');
@@ -52,30 +61,43 @@ function preload()
   game.load.image('planetfloor2', 'sprites/planetfloor2.png');
   game.load.image('planetfloor3', 'sprites/planetfloor3.png');
   game.load.image('planetfloor4', 'sprites/planetfloor4.png');
+
   //Player + projectile
   game.load.spritesheet("player", "sprites/spaceman.png", 128, 128);
   game.load.spritesheet("playerDeath", "sprites/spacemankuolema.png", 128, 128);
   game.load.spritesheet("projectile", "sprites/GunBullet2s16x16.png", 16, 16);
   game.load.spritesheet("projectile2", "sprites/GunBullet1s16x16.png", 16, 16);
 
-
   //Enemies
   game.load.spritesheet("bugMonster", "sprites/ötökkä.png", 128, 128);
   game.load.spritesheet("robotMonster", "sprites/robotti.png", 128, 128);
-
   game.load.spritesheet("bugMonsterBullet", "sprites/BugEnemyFire32x32.png", 32, 32);
   game.load.spritesheet("robotMonsterBullet", "sprites/enemtBulletR32x64.png", 32, 32);
+
   //Pickups+misc
   game.load.image('spawnPoint', 'sprites/spawnPoint.png');
   game.load.image('healthPickup', 'sprites/healthpickup.png');
   game.load.image('ammoPickup', 'sprites/ammopickup.png');
   game.load.spritesheet('portal', 'sprites/portal80x128.png', 80, 128, 10);
 
+  //Sounds
+  game.load.audio('music', 'sounds/music.mp3');
+  game.load.audio('pistol', 'sounds/player_shoot_pistol.wav');
+  game.load.audio('rifle', 'sounds/player_shoot_rifle.wav');
+  game.load.audio('bug_sound', 'sounds/bug_sound.mp3');
+  game.load.audio('bug_death', 'sounds/bug_death.mp3');
+  game.load.audio('robot_sound', 'sounds/robot_shoot.mp3');
+  game.load.audio('robot_death', 'sounds/robot_death.mp3');
+  game.load.audio('player_hit', 'sounds/player_hit.wav');
+  game.load.audio('game_over', 'sounds/game_over.wav');
+  game.load.audio('portal', 'sounds/portal.mp3');
+
 }
 
 
 function create()
 {
+
   cursors = game.input.keyboard.createCursorKeys();
   space = game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
   W_key = game.input.keyboard.addKey(Phaser.Keyboard.W)
@@ -103,6 +125,7 @@ function create()
   player.body.collideWorldBounds = true;
   player.anchor.set(0.5);
   player.body.allowRotation = false;
+  player.body.setSize(45,115,45,4);
   //Health is now global and shared between states
   player.health = game.global.playerHealth;
   //PistolAnims
@@ -124,6 +147,7 @@ function create()
   enemies = game.add.group();
   enemies.physicsBodyType = Phaser.Physics.ARCADE;
   enemies.enableBody = true;
+
 
 
   // Create group for pickups
@@ -190,11 +214,19 @@ function create()
   fogSprite.fixedToCamera = true;
   updateFog();
 
-
+  music = game.add.audio('music');
+  if (musicPlaying === false)
+  {
+    music.play();
+    musicPlaying = true;
+  }
+  music.loop = true;
+  music.volume = 0.8;
 }
 
 function update()
 {
+
   fogCircle.x = player.x;
   fogCircle.y = player.y;
 
@@ -365,6 +397,10 @@ function update()
 
   // Player death animation
   if (player.exists == false && game.global.playerDied != true) {
+    music.stop();
+    var gameoverSound = game.add.audio('game_over');
+    gameoverSound.volume = 0.8;
+    gameoverSound.play();
     playerDeath = game.add.sprite(playerX - 60, playerY - 60,'playerDeath');
     game.world.bringToTop(enemies);
     playerDeathAnim = playerDeath.animations.add('playerDeathAnim', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);
@@ -375,9 +411,12 @@ function update()
 
   // Testing level creation
   if (One.isDown) {
+    playerHealth = 100;
+    music.stop();
+    musicPlaying = false;
     startNewLevel();
-    player.heal(100);
   }
+
 
 
   if (game.input.activePointer.isDown) {
@@ -400,6 +439,8 @@ function update()
     enemyCoordMult = (Math.floor(enemy.x) / Math.floor(player.x)) * (Math.floor(player.y) / Math.floor(enemy.y)) * 100;
     if (Phaser.Math.distance(player.x, player.y, enemy.x, enemy.y) < 400 && player.exists == true && enemy.isDead == false) {
       //fireEnemyProjectile(enemy.x, enemy.y, enemy.id);
+
+
 
       if (enemyCoordDiv < 100 && enemyCoordMult < 100) {
         enemy.animations.play("attackAnimRight", 5, true);
@@ -435,6 +476,20 @@ function update()
 
     // Enemy death animation
     if (enemy.health == 1 && enemy.isDead == false) {
+      if (robotOrBug === 1)
+      {
+        var enemySound = game.add.audio('bug_death');
+        enemySound.volume = 0.7;
+        playerScore += 30;
+        enemySound.play();
+      }
+      else
+      {
+        var enemySound = game.add.audio('robot_death');
+        enemySound.volume = 0.7;
+        playerScore += 20;
+        enemySound.play();
+      }
       enemy.alive = false;
       enemy.isDead = true;
       enemy.body.velocity.setTo(0,0);
@@ -447,6 +502,7 @@ function update()
         if (enemy.input) {
           enemy.input.useHandCursor = false;
         }
+        
         enemy.events.destroy();
       }, enemy);
 
@@ -464,6 +520,18 @@ function update()
     //projectile = enemyProjectiles.getAt(enemyID).getFirstExists(false);
     projectile = enemyProjectiles[enemyID].getFirstExists(false);
     if (projectile && enemies.getAt(enemyID).readyToFire == true) {
+      if (robotOrBug === 1)
+      {
+        var enemySound = game.add.audio('bug_sound');
+        enemySound.volume = 0.4;
+        enemySound.play();
+      }
+      else
+      {
+        var enemySound = game.add.audio('robot_sound');
+        enemySound.volume = 0.4;
+        enemySound.play();
+      }
       projectile.reset(x, y); // Projectile origin point
       game.physics.arcade.moveToObject(projectile, player, 600); // Projectile speed
       projectile.rotation = game.physics.arcade.angleToXY(projectile, player.x, player.y);
@@ -506,6 +574,7 @@ function render()
   game.debug.text('Player health: ' + player.health, 2, 28, "#00ff00");
   //game.debug.text('Enemies left: ' + enemies.total, 2, 42, "#00ff00");
   game.debug.text('Rifle ammo left: ' + playerRifleAmmo, 2, 42, "#00ff00");
+  game.debug.text('Player score: ' + playerScore, 2, 56, "#00ff00");
 }
 
 function bringToTop()
@@ -530,7 +599,9 @@ function fireProjectile() {
   projectile = projectiles.getFirstExists(false);
   if (playerHasRifle == true && projectile && player.exists == true) {
     projectile.loadTexture('projectile2',1);
-
+    var rifleSound = game.add.audio('rifle');
+    rifleSound.volume = 0.5;
+    rifleSound.play();
     if (player.anim == "leftRifle") {
       projectile.reset(player.x - 56, player.y - 23);
     }
@@ -552,6 +623,9 @@ function fireProjectile() {
   }
   else if (projectile && player.exists == true) {
     projectile.loadTexture('projectile',1);
+    var pistolSound = game.add.audio('pistol');
+    pistolSound.volume = 0.5;
+    pistolSound.play();
     if (player.anim == "left") {
       projectile.reset(player.x - 56, player.y - 23);
     }
@@ -610,9 +684,15 @@ function hitEnemy(enemy, projectile) {
 
 function hitPlayer(player, projectile) {
   player.damage(4);
+  var playerHitSound = game.add.audio('player_hit');
+  playerHitSound.volume = 0.5;
+  playerHitSound.play();
   projectile.kill();
 }
 function contactDamage() {
+  var playerHitSound = game.add.audio('player_hit');
+  playerHitSound.volume = 0.2;
+  playerHitSound.play();
   player.damage(1);
 }
 
@@ -623,6 +703,7 @@ function pickupHealthEffect(player, healthPickup)
   if (player.health != player.maxHealth)
   {
     player.heal(20);
+    playerScore += 10;
   }
   healthPickup.kill();
 }
@@ -631,7 +712,7 @@ function pickupAmmoEffect(player, ammoPickup)
 {
 
   playerRifleAmmo += 30;
-
+  playerScore += 5;
   ammoPickup.kill();
 }
 
@@ -658,6 +739,7 @@ function spawnEnemy(x, y) {
     enemyColor = Math.floor((Math.random() * 3) + 1);
 
     enemy = game.add.sprite(x, y,'bugMonster');
+    robotOrBug = 1;
 
     if (enemyColor == 1) {
       die = enemy.animations.add('enemyDeathAnim', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
@@ -703,6 +785,7 @@ function spawnEnemy(x, y) {
   else {
     //enemyColor = Math.floor((Math.random() * 3) + 1);
     enemy = game.add.sprite(x, y,'robotMonster');
+    robotOrBug = 0;
 
     die = enemy.animations.add('enemyDeathAnim', [378, 379, 380, 381, 382, 383, 384, 385, 386, 387, 388, 389, 390, 391, 392, 393, 394, 395, 396, 397]);
 
@@ -723,6 +806,7 @@ function spawnEnemy(x, y) {
   enemyID++;
   enemies.set(enemy, 'health', 6);
   enemies.set(enemy, 'checkWorldBounds', true);
+  enemy.body.setSize(45,115,45,4);
 
   // The enemy shooting delay
   enemy.readyToFire = true;
@@ -785,6 +869,9 @@ function portalEffect()
 {
   if (enemies.total === 0)
   {
+    var portalSound = game.add.audio('portal');
+    portalSound.volume = 0.6;
+    portalSound.play();
     startNewLevel();
   }
 
@@ -809,7 +896,7 @@ function randomizeLevelSprites()
 
   if (game.global.station == 1)
   {
-    wall = "wall"+Math.floor((Math.random() * 5)+1);
+    wall = "wall"+Math.floor((Math.random() * 4)+1);
     floor = "floor"+Math.floor((Math.random() * 6)+1);
   }
   else
@@ -851,6 +938,11 @@ function addLevelSpawns()
 
 function createNewLevel()
 {
+  if (musicPlaying === false)
+  {
+    music.play();
+    musicPlaying = true;
+  }
 
   //Randomizes levels objects, must be done before creating level!
   randomizeLevelObjects();
@@ -865,6 +957,7 @@ function createNewLevel()
 
   //Bring other sprites to top
   bringToTop();
+  
 
   // Spawns
   addLevelSpawns();
