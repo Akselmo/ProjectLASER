@@ -49,7 +49,7 @@ function preload()
   game.load.image('wall4', 'sprites/wall4.png');
   game.load.image('planetwall1', 'sprites/planetwall1.png');
   game.load.image('planetwall2', 'sprites/planetwall2.png');
- 
+
   //Floors
   game.load.image('floor1', 'sprites/floor1.png');
   game.load.image('floor2', 'sprites/floor2.png');
@@ -97,7 +97,6 @@ function preload()
 
 function create()
 {
-
   cursors = game.input.keyboard.createCursorKeys();
   space = game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
   W_key = game.input.keyboard.addKey(Phaser.Keyboard.W)
@@ -226,7 +225,6 @@ function create()
 
 function update()
 {
-
   fogCircle.x = player.x;
   fogCircle.y = player.y;
 
@@ -406,8 +404,16 @@ function update()
     playerDeathAnim = playerDeath.animations.add('playerDeathAnim', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);
     game.global.playerDied = true;
     playerDeath.animations.play('playerDeathAnim', 5, false);
+    // Game over text
+    var gameOverText1 = game.add.text(game.camera.x + 325, game.camera.y + 400, 'YOU DIED', { font: '64px Impact', fill: '#ff0000', align: 'center'});
+    var gameOverText2 = game.add.text(game.camera.x + 255, game.camera.y + 500, 'Refresh the page to try again', { font: '32px Impact', fill: '#ff0000' });
+    gameOverText1.stroke = '#000000';
+    gameOverText1.strokeThickness = 6;
+    gameOverText2.stroke = '#000000';
+    gameOverText2.strokeThickness = 6;
+    game.world.bringToTop(gameOverText1);
+    game.world.bringToTop(gameOverText2);
   }
-
 
   // Testing level creation
   if (One.isDown) {
@@ -502,7 +508,7 @@ function update()
         if (enemy.input) {
           enemy.input.useHandCursor = false;
         }
-        
+
         enemy.events.destroy();
       }, enemy);
 
@@ -555,7 +561,7 @@ function update()
   //Update player health
   game.global.playerHealth = player.health;
 
-  
+
   //Checking if player has rifle ammo
   if (playerRifleAmmo > 0)
   {
@@ -598,7 +604,7 @@ function resetProjectile(projectile) {
 function fireProjectile() {
   projectile = projectiles.getFirstExists(false);
   if (playerHasRifle == true && projectile && player.exists == true) {
-    projectile.loadTexture('projectile2',1);
+    projectile.loadTexture('projectile2', 0);
     var rifleSound = game.add.audio('rifle');
     rifleSound.volume = 0.5;
     rifleSound.play();
@@ -957,7 +963,7 @@ function createNewLevel()
 
   //Bring other sprites to top
   bringToTop();
-  
+
 
   // Spawns
   addLevelSpawns();
